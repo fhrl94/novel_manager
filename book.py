@@ -141,8 +141,14 @@ def SelectClass_SaveContent():
     # print(string.readline())
     for list in lists:
         # print(type(list))
-        print(list.chapterurl)
-        html = OpenUrl(list.chapterurl)
+        # print(list.chapterurl)
+        while True:
+            try:
+                html = OpenUrl(list.chapterurl)
+                break
+            except ConnectTimeout:
+                print("网络超时，1分钟后重试")
+                time.sleep(60)
         soup = ParsingString(html)
         for tag in mapping:
             # print(soup.select(tag))
@@ -153,8 +159,9 @@ def SelectClass_SaveContent():
                     for text in texts.stripped_strings:
                         print(text)
                         content = content + text + '\n'
-                stone.query(BookList).filter(BookList.id == list.id).update({BookList.chaptercontent: content})
-                stone.commit()
+                if len(content)>1500:
+                    stone.query(BookList).filter(BookList.id == list.id).update({BookList.chaptercontent: content})
+                    stone.commit()
 # r=requests.get(url='http://www.168xs.com/du/121796/37676436.html')
 # print(r.content)
 
@@ -178,7 +185,7 @@ def send(header,body):
 
     # server = smtplib.SMTP(smtp_server, 25)
     # server.login(from_addr, password)
-    server = smtplib.SMTP(smtp_server)
+    server = smtplib.SMTP(smtp_server,587)
     server.starttls()
     server.login(from_addr, password)
     # server.set_debuglevel(1)
@@ -193,7 +200,7 @@ def Check_Send():
             stone.query(BookList).filter(BookList.id==list.id).update({BookList.status:False})
             stone.commit()
         else:
-            send(list.bookchapter+"无法解析", list.chapterurl+"请查看原链接，更新TAG")
+            send(list.bookchapter+"无法解析", list.chapterurl+"1、请查看原链接，更新TAG\n2、正文内容不足")
     try:
         stone.query(BookList).filter(BookList.status==True,BookList.chaptercontent!=None).one()
         Check_Send()
@@ -206,10 +213,7 @@ if __name__ == '__main__':
 # 获取目录URL
     GetBookDirectoryUrl_Save()
     while True:
-        try:
-            GetChapterUrl_OK()
-            SelectClass_SaveContent()
-            Check_Send()
-        except ConnectTimeout:
-            print("网络超时，1分钟后重试")
-            time.sleep(60)
+        GetChapterUrl_OK()
+        SelectClass_SaveContent()
+        Check_Send()
+
