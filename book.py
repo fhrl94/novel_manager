@@ -7,9 +7,10 @@ from email.mime.text import MIMEText
 from email.utils import parseaddr, formataddr
 
 import  requests
+import sys
 from bs4 import BeautifulSoup as bs
 from requests import ConnectTimeout
-# from requests.exceptions import ConnectTimeout
+from requests.exceptions import ConnectTimeout
 from sqlalchemy.orm.exc import NoResultFound
 
 from novel_manager.stone import stoneobject, BookName, BookList
@@ -197,10 +198,10 @@ def Check_Send():
     for list in lists:
         if list.chaptercontent!=None:
             send(list.bookchapter,list.chaptercontent)
-            stone.query(BookList).filter(BookList.id==list.id).update({BookList.status:False})
-            stone.commit()
         else:
             send(list.bookchapter+"无法解析", list.chapterurl+"1、请查看原链接，更新TAG\n2、正文内容不足")
+        stone.query(BookList).filter(BookList.id==list.id).update({BookList.status:False})
+        stone.commit()
     try:
         stone.query(BookList).filter(BookList.status==True,BookList.chaptercontent!=None).one()
         Check_Send()
@@ -213,7 +214,16 @@ if __name__ == '__main__':
 # 获取目录URL
     GetBookDirectoryUrl_Save()
     while True:
-        GetChapterUrl_OK()
-        SelectClass_SaveContent()
-        Check_Send()
+        try:
+            GetChapterUrl_OK()
+            SelectClass_SaveContent()
+            Check_Send()
+        except:
+            f = open("log.txt", 'ab+')
+            info = sys.exc_info()
+            # print(type(str(info[0])))
+            # print(type(str(info[1])))
+            # print(str(info[0]),":",str(info[1]) )
+            f.write((str(datetime.now())+"\n"+str(info[0])+":"+str(info[1])+"\n").encode())
+            f.close()
 
